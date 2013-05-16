@@ -9,6 +9,11 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+-export([
+    status/0,
+    status/1
+]).
+
 -define(SERVER, ?MODULE).
 
 -record(state, {name, all, free, connecting, max,
@@ -41,6 +46,13 @@ acquire(Pool, Timeout) when is_integer(Timeout) ->
 release(Pool, Connection) ->
     gen_server:cast(server_name(Pool), {release, Connection}).
 
+status() ->
+    {ok, Config} = application:get_env(redis, pools),
+    [(catch status(PoolName)) || {PoolName,_} <- Config].
+
+status(Pool) ->
+    gen_server:call(server_name(Pool), status, ?DEFAULT_ACQUIRE_TIMEOUT).
+
 with_db(Pool, WithDb, OnError) ->
     with_db(Pool, WithDb, OnError, ?DEFAULT_ACQUIRE_TIMEOUT).
 
@@ -66,7 +78,23 @@ init([Name, Options]) ->
 
 handle_call({acquire, Timeout}, From, State) ->
     schedule_dispatch(),
-    {noreply, add_waiter(From, Timeout, State)}.
+    {noreply, add_waiter(From, Timeout, State)};
+handle_call(status, _, State) ->
+    All = State#state.all,
+    Free = queue:to_list(State#state.free),
+    Reply =
+    {State#state.name, [
+        {all, All},
+        {free, Free},
+        {in_use, All -- Free},
+        {connecting, State#state.connecting},
+        {max, State#state.max},
+        {waiters, State#state.waiters},
+        {connect_options, State#state.connect_options},
+        {db, State#state.db}
+    ]},
+
+    {reply, Reply, State}.
 
 handle_cast({release, Connection}, State) ->
     {noreply, release_connection(Connection, State)}.
