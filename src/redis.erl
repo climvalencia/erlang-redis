@@ -2591,7 +2591,7 @@ zunionstore(Client, Destination, Keys, Options) when length(Keys) > 0 ->
 %%% Internal functions
 %%%===================================================================
 
-request_timeout(Timeout) -> Timeout * 1000 + 1500.
+request_timeout(Timeout) -> Timeout * 1000 + 2000.
 
 where_arg(before) -> <<"BEFORE">>;
 where_arg('after') -> <<"AFTER">>;
