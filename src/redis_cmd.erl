@@ -14,7 +14,7 @@ send(Socket, Cmd, Args) ->
     SendArgs = [Cmd|Args],
     Header = ["*", arg_count(SendArgs), ?CRLF],
     Body = [ ["\$", arg_size(Arg), ?CRLF, Arg, ?CRLF] || Arg <- SendArgs ],
-    Request = Header ++ Body,
+    Request = [Header, Body],
     gen_tcp:send(Socket, Request).
 
 arg_count(Args) ->
