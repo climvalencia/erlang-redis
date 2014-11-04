@@ -14,6 +14,7 @@
 -record(state, {socket, requests, reply, stopping, recipient}).
 
 -define(DEFAULT_STOP_TIMEOUT, 5000).
+-define(DEFAULT_REQUEST_TIMEOUT, 5000).
 
 %%%===================================================================
 %%% API
@@ -26,7 +27,7 @@ start_link(Options) ->
     gen_server:start_link(?MODULE, [self(), Options], []).
 
 request(Client, Request) ->
-    request(Client, Request, infinity).
+    request(Client, Request, ?DEFAULT_REQUEST_TIMEOUT).
 
 request(Client, {_Cmd, _Args}=Request, Timeout) ->
     gen_server:call(Client, {request, validate_request(Request)}, Timeout).
