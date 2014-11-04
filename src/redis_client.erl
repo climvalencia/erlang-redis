@@ -9,7 +9,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--define(SERVER, ?MODULE). 
+-define(SERVER, ?MODULE).
 
 -record(state, {socket, requests, reply, stopping, recipient}).
 
@@ -107,7 +107,7 @@ init_state(Socket, Parent, Options) ->
 connect(Options) ->
     Host = proplists:get_value(host, Options, ?DEFAULT_HOST),
     Port = proplists:get_value(port, Options, ?DEFAULT_PORT),
-    gen_tcp:connect(Host, Port, [binary, {active, once}, {packet, raw}, 
+    gen_tcp:connect(Host, Port, [binary, {active, once}, {packet, raw},
                                  {reuseaddr, true}]).
 
 send_request({Cmd, Args}, From, #state{requests=Reqs, socket=Socket}=State) ->
@@ -134,11 +134,11 @@ publish_value({ok, [<<"pmessage">>, Pattern, Channel, Msg]},
 dispatch_message(Msg, Fun) when is_function(Fun) ->
     Fun(Msg);
 dispatch_message(Msg, {M, F, A}) ->
-    erlang:apply(M, F, A ++ [Msg]); 
+    erlang:apply(M, F, A ++ [Msg]);
 dispatch_message(Msg, Proc) when is_pid(Proc); is_atom(Proc) ->
     erlang:send(Proc, Msg).
 
-erlang_value({ok, Int}) when is_integer(Int) -> {ok, Int}; 
+erlang_value({ok, Int}) when is_integer(Int) -> {ok, Int};
 erlang_value({ok, Bin}) when is_binary(Bin) -> {ok, Bin};
 erlang_value({ok, "OK"}) -> ok;
 erlang_value({ok, List}) when is_list(List) -> {ok, List};
