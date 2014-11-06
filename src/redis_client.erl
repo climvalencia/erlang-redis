@@ -60,14 +60,15 @@ handle_call(quit, From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({tcp, Socket, Data}, #state{reply=Reply}=State) ->
-    inet:setopts(Socket, [{active, once}]),
-    case redis_reply:data(Data, Reply) of
-        {{value, Value}, Next} ->
-            {noreply, handle_value(Value, State#state{reply=Next})};
-        {pending, Next} ->
-            {noreply, State#state{reply=Next}}
+handle_info({tcp, Socket, Data}, State) ->
+    case process_data(Data, State) of
+        {ok, NewState} ->
+            inet:setopts(Socket, [{active, once}]),
+            {noreply, NewState};
+        Error ->
+            {stop, Error, State}
     end;
+
 handle_info({tcp_closed, _}, #state{stopping=true}=State) ->
     {stop, normal, State};
 handle_info({tcp_closed, Socket}, State) ->
@@ -114,6 +115,21 @@ connect(Options) ->
 send_request({Cmd, Args}, From, #state{requests=Reqs, socket=Socket}=State) ->
     ok = redis_cmd:send(Socket, Cmd, Args),
     State#state{requests=queue:in(From, Reqs)}.
+
+process_data(Data, #state{reply=Reply}=State) ->
+    case redis_reply:data(Data, Reply) of
+        {{value, Value}, Next} ->
+            NewSt = handle_value(Value, State),
+            case Next of
+                {unknown, MoreData} when MoreData =/= <<>> ->
+                    % there's still data we can process
+                    process_data(MoreData, NewSt);
+                _ ->
+                    {ok, NewSt#state{reply=Next}}
+            end;
+        {pending, Next} ->
+            {ok, State#state{reply=Next}}
+    end.
 
 handle_value(Value, #state{requests=Requests0}=State) ->
     case queue:out(Requests0) of
